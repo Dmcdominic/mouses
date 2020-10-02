@@ -13,7 +13,8 @@ var UPDATE_TIME = 1000 / 10;
 //We want the server to keep track of the whole game state and the clients just to send updates
 //in this case the game state are the coordinates of each player
 var gameState = {
-    players: {}
+    players: {},
+    clicks: 0
 }
 
 //when a client connects serve the static files in the public directory ie public/index.html
@@ -39,7 +40,8 @@ io.on('connection', function (socket) {
         //object creation in javascript
         gameState.players[socket.id] = {
             x: 0,
-            y: obj.y
+            y: obj.y,
+            dead: false
         }
 
         //gameState.players is an object, not an array or list
@@ -62,8 +64,32 @@ io.on('connection', function (socket) {
 
     //when I receive an update from a client, update the game state
     socket.on('clientUpdate', function (obj) {
-        gameState.players[socket.id].x = obj.x;
-        gameState.players[socket.id].y = obj.y;
+        if (socket.id != null) {
+            gameState.players[socket.id].x = obj.x;
+            gameState.players[socket.id].y = obj.y;
+        }
+    });
+
+    //when client says they clicked, change the mouse appearance for everyone
+    const CLOSE_ENOUGH = 20;
+    socket.on('clientClick', function (obj) {
+        gameState.clicks++;
+        // check if they clicked on another pointer
+        let x = gameState.players[socket.id].x;
+        let y = gameState.players[socket.id].y;
+        for (let playerID in gameState.players) {
+            console.log(playerID);
+            console.log(socket.id);
+            if (playerID == socket.id) continue;
+            console.log("now checking if clicked on: " + playerID);
+            let player = gameState.players[playerID];
+            if (!player) continue;
+            if (Math.sqrt((x - player.x) * (x - player.x) + (y - player.y) * (y - player.y)) < CLOSE_ENOUGH) {
+                console.log("close enough! " + playerID);
+                // now kill the cursor
+                player.dead = true;
+            }
+        }
     });
 
     //setInterval calls the function at the given interval in time
@@ -74,6 +100,19 @@ io.on('connection', function (socket) {
 
 
 });
+
+
+
+// revive the players every 5 seconds
+setInterval(function () {
+    console.log("reviving all players");
+    for (let playerID in gameState.players) {
+        let player = gameState.players[playerID];
+        if (player) {
+            player.dead = false;
+        }
+    }
+}, 5000);
 
 
 //listen to the port 3000

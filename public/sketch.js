@@ -54,18 +54,34 @@ function updateState(state) {
     //iterate through the players
     for (var playerId in state.players) {
         if (state.players.hasOwnProperty(playerId)) {
-
             //in this case I don't have to draw the pointer at my own position
             if (playerId != socket.id) {
                 var playerState = state.players[playerId];
 
                 //draw a pointer image for each player except for myself
-                image(pointer, playerState.x, playerState.y);
+                if (!playerState.dead) {
+                    for (let i=0; i <= state.clicks; i++) {
+                        image(pointer, playerState.x + i * 5, playerState.y + i * 3);
+                    }
+                }
             }
         }
     }
 
 }
+
+//p5 function called on mouse press - send coordinates to server
+function mousePressed() {
+    //make sure the connection is established
+    if (socket.id) {
+        console.log("Mouse pressed at " + mouseX + " " + mouseY);
+        //send 
+        socket.emit('clientClick', { x: mouseX, y: mouseY });
+    }
+}
+
+
+
 
 //connected to the server
 function onConnect() {
